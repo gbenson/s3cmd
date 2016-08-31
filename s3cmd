@@ -1593,6 +1593,7 @@ def cmd_sync_local2remote(args):
             file_list.sort()
             ret = EX_OK
             for file in file_list:
+                maybe_pause(cfg.pausefile)
                 seq += 1
                 item = local_list[file]
                 src = item['full_name']
@@ -2513,6 +2514,8 @@ class MyHelpFormatter(IndentedHelpFormatter):
             return ""
 
 def main():
+    Config.pausefile = ""
+
     global cfg
     cfg = Config()
     commands_list = get_commands_list()
@@ -2658,6 +2661,7 @@ def main():
     optparser.add_option(      "--stop-on-error", dest="stop_on_error", action="store_true", help="stop if error in transfer")
     optparser.add_option(      "--content-disposition", dest="content_disposition", action="store", help="Provide a Content-Disposition for signed URLs, e.g., \"inline; filename=myvideo.mp4\"")
     optparser.add_option(      "--content-type", dest="content_type", action="store", help="Provide a Content-Type for signed URLs, e.g., \"video/mp4\"")
+    optparser.add_option(      "--pausefile", dest="pausefile", help="Pause local-remote sync if the specified file exists")
 
     optparser.set_usage(optparser.usage + " COMMAND [parameters]")
     optparser.set_description('S3cmd is a tool for managing objects in '+
@@ -2931,6 +2935,20 @@ def report_exception(e, msg=u''):
             sys.stderr.write("Now the question is where have the s3cmd modules been installed?\n")
 
         sys.stderr.write(alert_header % (u"above lines", u""))
+
+def maybe_pause(pausefile):
+    if not pausefile:
+        return
+    pausefile, warned = os.path.expanduser(pausefile), False
+    while os.path.exists(pausefile):
+        if not warned:
+	    stamp = time.ctime()
+            warning(stamp + ": %s exists" % pausefile)
+            warning(stamp + ": delete to resume transfer")
+            warned = True
+        time.sleep(5)
+    if warned:
+        warning(time.ctime() + ": resuming transfer")
 
 if __name__ == '__main__':
     try:
